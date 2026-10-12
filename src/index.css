@@ -1,10 +1,11 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
+ 
 :root {
   font-family: 'DM Sans', sans-serif;
-  color: #252520;
-  background: #f8f7f4;
+  color: #171717;
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -12,13 +13,14 @@
   font-optical-sizing: auto;
   font-weight: 400;
   scroll-behavior: smooth;
-  --background: #f8f7f4;
+
+  --background: #ffffff;
   --surface: #ffffff;
-  --text: #252520;
-  --muted: #85847e;
-  --line: #e9e7e0;
-  --accent: #b29b73;
-  --accent-dark: #806c4b;
+  --text: #171717;
+  --muted: #777777;
+  --line: #e8e8e8;
+  --accent: #8b5cf6;
+  --accent-dark: #6d28d9;
 }
 
 * {
