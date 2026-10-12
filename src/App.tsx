@@ -15,7 +15,9 @@ import {
   X,
   LogOut,
 } from 'lucide-react'
+
 import Auth from './Auth'
+import Profile from './Profile'
 import { supabase } from './supabase'
 import './App.css'
 
@@ -52,6 +54,7 @@ const navigation = [
   { label: 'Crear outfit', icon: Plus },
   { label: 'Calendario', icon: CalendarDays },
   { label: 'Favoritos', icon: Heart },
+  { label: 'Mi perfil', icon: UserRound },
 ]
 
 function App() {
@@ -139,17 +142,21 @@ function App() {
     setActive(section)
     setMenuOpen(false)
 
-    if (section === 'Inicio') {
+    if (section === 'Mi perfil' || section === 'Inicio') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else if (section === 'Crear outfit') {
+      return
+    }
+
+    if (section === 'Crear outfit') {
       document.getElementById('crear')?.scrollIntoView({
         behavior: 'smooth',
       })
-    } else {
-      document.getElementById('coleccion')?.scrollIntoView({
-        behavior: 'smooth',
-      })
+      return
     }
+
+    document.getElementById('coleccion')?.scrollIntoView({
+      behavior: 'smooth',
+    })
   }
 
   if (!authReady) {
@@ -190,7 +197,10 @@ function App() {
         <a
           className="brand"
           href="#inicio"
-          onClick={() => navigate('Inicio')}
+          onClick={(event) => {
+            event.preventDefault()
+            navigate('Inicio')
+          }}
         >
           <span className="brand-mark">O</span>
           <span>OUTFIA</span>
@@ -201,9 +211,11 @@ function App() {
         <nav className="side-nav" aria-label="Navegación principal">
           {navigation.map(({ label, icon: Icon }) => (
             <button
+              type="button"
               className={`nav-item ${active === label ? 'active' : ''}`}
               key={label}
               onClick={() => navigate(label)}
+              aria-current={active === label ? 'page' : undefined}
             >
               <Icon size={18} strokeWidth={1.7} />
               <span>{label}</span>
@@ -223,9 +235,10 @@ function App() {
           </div>
 
           <button
+            type="button"
             className="profile-button"
-            onClick={() => void handleSignOut()}
-            title={`Cerrar sesión de ${session.user.email ?? displayName}`}
+            onClick={() => navigate('Mi perfil')}
+            title={`Ver perfil de ${displayName}`}
           >
             <span className="avatar">
               {displayName.trim().charAt(0).toUpperCase() || 'U'}
@@ -233,16 +246,26 @@ function App() {
 
             <span className="profile-copy">
               <strong>{displayName}</strong>
-              <small>Cerrar sesión</small>
+              <small>Mi perfil</small>
             </span>
 
-            <LogOut size={16} />
+            <UserRound size={16} />
+          </button>
+
+          <button
+            type="button"
+            className="nav-item"
+            onClick={() => void handleSignOut()}
+          >
+            <LogOut size={18} strokeWidth={1.7} />
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
 
       {menuOpen && (
         <button
+          type="button"
           className="mobile-overlay"
           aria-label="Cerrar menú"
           onClick={() => setMenuOpen(false)}
@@ -252,6 +275,7 @@ function App() {
       <main className="main-content" id="inicio">
         <header className="topbar">
           <button
+            type="button"
             className="icon-button mobile-menu"
             aria-label="Abrir menú"
             onClick={() => setMenuOpen(true)}
@@ -279,6 +303,7 @@ function App() {
                 />
 
                 <button
+                  type="button"
                   className="search-close"
                   aria-label="Cerrar búsqueda"
                   onClick={() => {
@@ -291,6 +316,7 @@ function App() {
               </div>
             ) : (
               <button
+                type="button"
                 className="icon-button"
                 aria-label="Buscar outfits"
                 onClick={() => setSearchOpen(true)}
@@ -300,260 +326,290 @@ function App() {
             )}
 
             <button
+              type="button"
               className="icon-button profile-icon"
+              aria-label="Ver mi perfil"
+              title="Mi perfil"
+              onClick={() => navigate('Mi perfil')}
+            >
+              <UserRound size={19} />
+            </button>
+
+            <button
+              type="button"
+              className="icon-button"
               aria-label="Cerrar sesión"
               title="Cerrar sesión"
               onClick={() => void handleSignOut()}
             >
-              <UserRound size={19} />
+              <LogOut size={19} />
             </button>
           </div>
         </header>
 
         <div className="page-content">
-          <section className="welcome-row">
-            <div>
-              <p className="eyebrow">TU ESTILO, TU IDENTIDAD</p>
+          {active === 'Mi perfil' ? (
+            <Profile session={session} />
+          ) : (
+            <>
+              <section className="welcome-row">
+                <div>
+                  <p className="eyebrow">TU ESTILO, TU IDENTIDAD</p>
 
-              <h1>
-                Vístete como <span>te sientes.</span>
-              </h1>
+                  <h1>
+                    Vístete como <span>te sientes.</span>
+                  </h1>
 
-              <p className="welcome-description">
-                Encuentra inspiración, crea combinaciones y haz que cada
-                look hable por ti.
-              </p>
-            </div>
+                  <p className="welcome-description">
+                    Encuentra inspiración, crea combinaciones y haz que cada
+                    look hable por ti.
+                  </p>
+                </div>
 
-            <div className="today-label">
-              <span className="today-dot" />
-              <span>Tu espacio de estilo</span>
-            </div>
-          </section>
+                <div className="today-label">
+                  <span className="today-dot" />
+                  <span>Tu espacio de estilo</span>
+                </div>
+              </section>
 
-          <section className="hero-banner">
-            <img
-              className="hero-image"
-              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90"
-              alt="Inspiración de moda y estilo personal"
-            />
+              <section className="hero-banner">
+                <img
+                  className="hero-image"
+                  src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1800&q=90"
+                  alt="Inspiración de moda y estilo personal"
+                />
 
-            <div className="hero-overlay" />
+                <div className="hero-overlay" />
 
-            <div className="hero-content">
-              <span className="hero-kicker">
-                <Sparkles size={14} />
-                TU PRÓXIMO LOOK EMPIEZA AQUÍ
-              </span>
+                <div className="hero-content">
+                  <span className="hero-kicker">
+                    <Sparkles size={14} />
+                    TU PRÓXIMO LOOK EMPIEZA AQUÍ
+                  </span>
 
-              <h2>
-                Menos dudas.
-                <br />
-                Más estilo.
-              </h2>
+                  <h2>
+                    Menos dudas.
+                    <br />
+                    Más estilo.
+                  </h2>
 
-              <p>
-                Inspírate, experimenta y encuentra combinaciones que
-                reflejen quién eres.
-              </p>
+                  <p>
+                    Inspírate, experimenta y encuentra combinaciones que
+                    reflejen quién eres.
+                  </p>
 
-              <button
-                className="hero-button"
-                onClick={() => navigate('Crear outfit')}
-              >
-                Explorar mi estilo
-                <ArrowUpRight size={17} />
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    className="hero-button"
+                    onClick={() => navigate('Crear outfit')}
+                  >
+                    Explorar mi estilo
+                    <ArrowUpRight size={17} />
+                  </button>
+                </div>
 
-            <div className="hero-index">
-              <span>01</span>
-              <span className="hero-index-line" />
-              <span>ESTILO PERSONAL</span>
-            </div>
-          </section>
+                <div className="hero-index">
+                  <span>01</span>
+                  <span className="hero-index-line" />
+                  <span>ESTILO PERSONAL</span>
+                </div>
+              </section>
 
-          <section className="stats-row" aria-label="Funciones de OUTFIA">
-            <div className="stat-item">
-              <span className="stat-icon">
-                <Shirt size={19} />
-              </span>
-              <div>
-                <strong>Tu armario</strong>
-                <span>Organiza tus prendas</span>
-              </div>
-            </div>
+              <section className="stats-row" aria-label="Funciones de OUTFIA">
+                <div className="stat-item">
+                  <span className="stat-icon">
+                    <Shirt size={19} />
+                  </span>
+                  <div>
+                    <strong>Tu armario</strong>
+                    <span>Organiza tus prendas</span>
+                  </div>
+                </div>
 
-            <div className="stat-item">
-              <span className="stat-icon">
-                <Sparkles size={19} />
-              </span>
-              <div>
-                <strong>Nuevas ideas</strong>
-                <span>Inspírate cada día</span>
-              </div>
-            </div>
+                <div className="stat-item">
+                  <span className="stat-icon">
+                    <Sparkles size={19} />
+                  </span>
+                  <div>
+                    <strong>Nuevas ideas</strong>
+                    <span>Inspírate cada día</span>
+                  </div>
+                </div>
 
-            <div className="stat-item">
-              <span className="stat-icon">
-                <Heart size={19} />
-              </span>
-              <div>
-                <strong>Tus favoritos</strong>
-                <span>Guarda lo que te gusta</span>
-              </div>
-            </div>
-          </section>
+                <div className="stat-item">
+                  <span className="stat-icon">
+                    <Heart size={19} />
+                  </span>
+                  <div>
+                    <strong>Tus favoritos</strong>
+                    <span>Guarda lo que te gusta</span>
+                  </div>
+                </div>
+              </section>
 
-          <section className="collection-section" id="coleccion">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">INSPIRACIÓN PARA TI</p>
+              <section className="collection-section" id="coleccion">
+                <div className="section-heading">
+                  <div>
+                    <p className="eyebrow">INSPIRACIÓN PARA TI</p>
 
-                <h2>
-                  {active === 'Favoritos'
-                    ? 'Tus looks guardados'
-                    : 'Encuentra tu look'}
-                </h2>
+                    <h2>
+                      {active === 'Favoritos'
+                        ? 'Tus looks guardados'
+                        : 'Encuentra tu look'}
+                    </h2>
 
-                <p className="section-description">
-                  Una selección de estilos para inspirar tu próxima combinación.
-                </p>
-              </div>
+                    <p className="section-description">
+                      Una selección de estilos para inspirar tu próxima
+                      combinación.
+                    </p>
+                  </div>
 
-              <button
-                className="text-button"
-                onClick={() => {
-                  setActive('Inicio')
-                  setSearch('')
-                }}
-              >
-                Ver colección
-                <ArrowUpRight size={16} />
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => {
+                      setActive('Inicio')
+                      setSearch('')
+                    }}
+                  >
+                    Ver colección
+                    <ArrowUpRight size={16} />
+                  </button>
+                </div>
 
-            {visibleOutfits.length > 0 ? (
-              <div className="outfit-grid">
-                {visibleOutfits.map((outfit, index) => {
-                  const isSaved = saved.includes(outfit.id)
+                {visibleOutfits.length > 0 ? (
+                  <div className="outfit-grid">
+                    {visibleOutfits.map((outfit, index) => {
+                      const isSaved = saved.includes(outfit.id)
 
-                  return (
-                    <article className="outfit-card" key={outfit.id}>
-                      <div className="outfit-image-wrap">
-                        <img
-                          className="outfit-image"
-                          src={outfit.image}
-                          alt={`Inspiración de estilo ${outfit.name}`}
-                          loading={index === 0 ? 'eager' : 'lazy'}
-                        />
-
-                        <span className="look-number">
-                          LOOK 0{outfit.id}
-                        </span>
-
-                        <button
-                          className={`save-button ${isSaved ? 'saved' : ''}`}
-                          aria-label={
-                            isSaved
-                              ? `Quitar ${outfit.name} de favoritos`
-                              : `Guardar ${outfit.name} en favoritos`
-                          }
-                          aria-pressed={isSaved}
-                          onClick={() => toggleSaved(outfit.id)}
-                        >
-                          <Bookmark
-                            size={18}
-                            fill={isSaved ? 'currentColor' : 'none'}
-                          />
-                        </button>
-
-                        <span className="outfit-category">
-                          {outfit.category}
-                        </span>
-                      </div>
-
-                      <div className="outfit-info">
-                        <div>
-                          <h3>{outfit.name}</h3>
-                          <p>Inspiración de temporada</p>
-                        </div>
-
-                        <div
-                          className="color-palette"
-                          aria-label="Paleta de colores"
-                        >
-                          {outfit.colors.map((color) => (
-                            <span
-                              key={color}
-                              className="color-dot"
-                              style={{ backgroundColor: color }}
+                      return (
+                        <article className="outfit-card" key={outfit.id}>
+                          <div className="outfit-image-wrap">
+                            <img
+                              className="outfit-image"
+                              src={outfit.image}
+                              alt={`Inspiración de estilo ${outfit.name}`}
+                              loading={index === 0 ? 'eager' : 'lazy'}
                             />
-                          ))}
-                        </div>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="empty-state">
-                <Heart size={30} strokeWidth={1.4} />
 
-                <h3>
-                  {active === 'Favoritos'
-                    ? 'Aún no tienes favoritos'
-                    : 'No encontramos resultados'}
-                </h3>
+                            <span className="look-number">
+                              LOOK 0{outfit.id}
+                            </span>
 
-                <p>
-                  {active === 'Favoritos'
-                    ? 'Guarda los looks que te gusten con el icono de marcador.'
-                    : 'Prueba con otro nombre o categoría.'}
-                </p>
+                            <button
+                              type="button"
+                              className={`save-button ${isSaved ? 'saved' : ''}`}
+                              aria-label={
+                                isSaved
+                                  ? `Quitar ${outfit.name} de favoritos`
+                                  : `Guardar ${outfit.name} en favoritos`
+                              }
+                              aria-pressed={isSaved}
+                              onClick={() => toggleSaved(outfit.id)}
+                            >
+                              <Bookmark
+                                size={18}
+                                fill={isSaved ? 'currentColor' : 'none'}
+                              />
+                            </button>
+
+                            <span className="outfit-category">
+                              {outfit.category}
+                            </span>
+                          </div>
+
+                          <div className="outfit-info">
+                            <div>
+                              <h3>{outfit.name}</h3>
+                              <p>Inspiración de temporada</p>
+                            </div>
+
+                            <div
+                              className="color-palette"
+                              aria-label="Paleta de colores"
+                            >
+                              {outfit.colors.map((color) => (
+                                <span
+                                  key={color}
+                                  className="color-dot"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <Heart size={30} strokeWidth={1.4} />
+
+                    <h3>
+                      {active === 'Favoritos'
+                        ? 'Aún no tienes favoritos'
+                        : 'No encontramos resultados'}
+                    </h3>
+
+                    <p>
+                      {active === 'Favoritos'
+                        ? 'Guarda los looks que te gusten con el icono de marcador.'
+                        : 'Prueba con otro nombre o categoría.'}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="hero-button"
+                      onClick={() => {
+                        setActive('Inicio')
+                        setSearch('')
+                      }}
+                    >
+                      Explorar looks
+                    </button>
+                  </div>
+                )}
+              </section>
+
+              <section className="create-banner" id="crear">
+                <div className="create-icon">
+                  <Sparkles size={23} />
+                </div>
+
+                <div className="create-copy">
+                  <p className="eyebrow">TU CREATIVIDAD, TU REGLA</p>
+                  <h2>El próximo look lo creas tú.</h2>
+                  <p>
+                    Estamos preparando un espacio para que combines prendas
+                    y construyas outfits a tu manera.
+                  </p>
+                </div>
 
                 <button
-                  className="hero-button"
-                  onClick={() => {
-                    setActive('Inicio')
-                    setSearch('')
-                  }}
+                  type="button"
+                  className="create-button"
+                  onClick={() =>
+                    window.alert(
+                      'El creador de outfits será una de las próximas funciones de OUTFIA.',
+                    )
+                  }
                 >
-                  Explorar looks
+                  <Plus size={18} />
+                  Próximamente
                 </button>
-              </div>
-            )}
-          </section>
-
-          <section className="create-banner" id="crear">
-            <div className="create-icon">
-              <Sparkles size={23} />
-            </div>
-
-            <div className="create-copy">
-              <p className="eyebrow">TU CREATIVIDAD, TU REGLA</p>
-              <h2>El próximo look lo creas tú.</h2>
-              <p>
-                Estamos preparando un espacio para que combines prendas y
-                construyas outfits a tu manera.
-              </p>
-            </div>
-
-            <button
-              className="create-button"
-              onClick={() =>
-                window.alert(
-                  'El creador de outfits será una de las próximas funciones de OUTFIA.',
-                )
-              }
-            >
-              <Plus size={18} />
-              Próximamente
-            </button>
-          </section>
+              </section>
+            </>
+          )}
 
           <footer className="footer">
-            <a className="footer-brand" href="#inicio">
+            <a
+              className="footer-brand"
+              href="#inicio"
+              onClick={(event) => {
+                event.preventDefault()
+                navigate('Inicio')
+              }}
+            >
               OUTFIA.
             </a>
             <span>Encuentra tu estilo, a tu manera.</span>
@@ -563,8 +619,14 @@ function App() {
       </main>
 
       <nav className="mobile-nav" aria-label="Navegación móvil">
-        {navigation.slice(0, 4).map(({ label, icon: Icon }) => (
+        {[
+          navigation[0],
+          navigation[1],
+          navigation[4],
+          navigation[5],
+        ].map(({ label, icon: Icon }) => (
           <button
+            type="button"
             key={label}
             className={`mobile-nav-item ${active === label ? 'active' : ''}`}
             onClick={() => navigate(label)}
