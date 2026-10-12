@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
@@ -13,34 +14,38 @@ type ProfileProps = {
 }
 
 export default function Profile({ session }: ProfileProps) {
-
   const [email, setEmail] = useState('')
   const [profile, setProfile] = useState<ProfileData>({
     full_name: '',
     phone: '',
   })
+  const [avatarUrl, setAvatarUrl] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [editing, setEditing] = useState(false)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
+    let cancelled = false
+
     async function loadProfile() {
       setLoading(true)
       setErrorMessage('')
 
       try {
         const { data: userData, error: userError } =
-  await supabase.auth.getUser()
+          await supabase.auth.getUser()
 
-if (userError) throw userError
+        if (userError) throw userError
 
-const user = userData.user ?? session.user
+        const user = userData.user ?? session.user
 
-if (!user) {
-  throw new Error('Debes iniciar sesión para ver tu perfil.')
-}
+        if (!user) {
+          throw new Error('Debes iniciar sesión para ver tu perfil.')
+        }
+
         setEmail(user.email ?? '')
 
         const { data, error } = await supabase
@@ -57,24 +62,62 @@ if (!user) {
           )
         }
 
+        if (cancelled) return
+
         setProfile({
           full_name:
             data.full_name ?? user.user_metadata?.full_name ?? '',
           phone: data.phone ?? '',
         })
-      } catch (err) {
-        setErrorMessage(
-          err instanceof Error
-            ? err.message
-            : 'No se pudo cargar el perfil.'
+
+        // Buscar la foto del usuario en su carpeta privada.
+        const { data: files, error: listError } =
+          await supabase.storage
+            .from('profile-photos')
+            .list(user.id, { limit: 20 })
+
+        if (listError) throw listError
+
+        const photo = files?.find(
+          (file) => file.name.startsWith('avatar.')
         )
+
+        if (photo) {
+          const { data: signedData, error: signedError } =
+            await supabase.storage
+              .from('profile-photos')
+              .createSignedUrl(
+                `${user.id}/${photo.name}`,
+                3600
+              )
+
+          if (signedError) throw signedError
+
+          if (!cancelled) {
+            setAvatarUrl(signedData.signedUrl)
+          }
+        } else if (!cancelled) {
+          setAvatarUrl('')
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setErrorMessage(
+            err instanceof Error
+              ? err.message
+              : 'No se pudo cargar el perfil.'
+          )
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     void loadProfile()
-    }, [session])
+
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
   function handleChange(
     field: keyof ProfileData,
@@ -96,7 +139,9 @@ if (!user) {
         await supabase.auth.getUser()
 
       if (userError || !userData.user) {
-        throw new Error('Tu sesión ha expirado. Inicia sesión de nuevo.')
+        throw new Error(
+          'Tu sesión ha expirado. Inicia sesión de nuevo.'
+        )
       }
 
       const user = userData.user
@@ -128,6 +173,7 @@ if (!user) {
         full_name: fullName,
         phone,
       })
+
       setEditing(false)
       setMessage('Tu perfil se actualizó correctamente.')
     } catch (err) {
@@ -141,16 +187,153 @@ if (!user) {
     }
   }
 
+  async function uploadPhoto(file: File) {
+    setUploadingPhoto(true)
+    setMessage('')
+    setErrorMessage('')
+
+    try {
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser()
+
+      if (userError || !userData.user) {
+        throw new Error(
+          'Tu sesión ha expirado. Inicia sesión de nuevo.'
+        )
+      }
+
+      const user = userData.user
+
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+      ]
+
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error(
+          'Usa una imagen JPG, PNG, WEBP o GIF.'
+        )
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error(
+          'La imagen debe pesar menos de 5 MB.'
+        )
+      }
+
+      const extensionByType: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+      }
+
+      const extension = extensionByType[file.type]
+      const filePath = `${user.id}/avatar.${extension}`
+
+      // Eliminar la foto anterior para permitir cambiar
+      // de formato sin dejar archivos antiguos.
+      const { data: existingFiles, error: listError } =
+        await supabase.storage
+          .from('profile-photos')
+          .list(user.id, { limit: 20 })
+
+      if (listError) throw listError
+
+      const previousPhotos = (existingFiles ?? [])
+        .filter((item) => item.name.startsWith('avatar.'))
+        .map((item) => `${user.id}/${item.name}`)
+        .filter((path) => path !== filePath)
+
+      if (previousPhotos.length > 0) {
+        const { error: removeError } =
+          await supabase.storage
+            .from('profile-photos')
+            .remove(previousPhotos)
+
+        if (removeError) throw removeError
+      }
+
+      const { error: uploadError } =
+        await supabase.storage
+          .from('profile-photos')
+          .upload(filePath, file, {
+            upsert: true,
+            contentType: file.type,
+            cacheControl: '3600',
+          })
+
+      if (uploadError) throw uploadError
+
+      const { data: signedData, error: signedError } =
+        await supabase.storage
+          .from('profile-photos')
+          .createSignedUrl(filePath, 3600)
+
+      if (signedError) throw signedError
+
+      setAvatarUrl(signedData.signedUrl)
+      setMessage('Tu foto de perfil se actualizó correctamente.')
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo subir la foto.'
+      )
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   if (loading) {
-    return <div className="profile-page">Cargando perfil...</div>
+    return (
+      <div className="profile-page">
+        Cargando perfil...
+      </div>
+    )
   }
 
   return (
     <main className="profile-page">
       <section className="profile-card">
         <div className="profile-header">
-          <div className="profile-avatar">
-            {profile.full_name.charAt(0).toUpperCase() || '?'}
+          <div className="profile-photo-container">
+            <div className="profile-avatar">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Foto de perfil"
+                />
+              ) : (
+                profile.full_name.charAt(0).toUpperCase() || '?'
+              )}
+            </div>
+
+            <label className="profile-photo-button">
+              {uploadingPhoto
+                ? 'Subiendo foto...'
+                : avatarUrl
+                  ? 'Cambiar foto'
+                  : 'Añadir foto'}
+
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                disabled={uploadingPhoto}
+                hidden
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0]
+
+                  if (file) {
+                    void uploadPhoto(file)
+                  }
+
+                  event.currentTarget.value = ''
+                }}
+              />
+            </label>
           </div>
 
           <div>
@@ -172,7 +355,9 @@ if (!user) {
         )}
 
         <div className="profile-field">
-          <label htmlFor="profile-email">Correo electrónico</label>
+          <label htmlFor="profile-email">
+            Correo electrónico
+          </label>
           <input
             id="profile-email"
             type="email"
@@ -183,13 +368,18 @@ if (!user) {
         </div>
 
         <div className="profile-field">
-          <label htmlFor="profile-name">Nombre completo</label>
+          <label htmlFor="profile-name">
+            Nombre completo
+          </label>
           <input
             id="profile-name"
             type="text"
             value={profile.full_name}
-            onChange={(e) =>
-              handleChange('full_name', e.target.value)
+            onChange={(event) =>
+              handleChange(
+                'full_name',
+                event.target.value
+              )
             }
             readOnly={!editing}
             maxLength={100}
@@ -198,13 +388,15 @@ if (!user) {
         </div>
 
         <div className="profile-field">
-          <label htmlFor="profile-phone">Teléfono</label>
+          <label htmlFor="profile-phone">
+            Teléfono
+          </label>
           <input
             id="profile-phone"
             type="tel"
             value={profile.phone}
-            onChange={(e) =>
-              handleChange('phone', e.target.value)
+            onChange={(event) =>
+              handleChange('phone', event.target.value)
             }
             readOnly={!editing}
             maxLength={30}
@@ -222,7 +414,6 @@ if (!user) {
                   setEditing(false)
                   setMessage('')
                   setErrorMessage('')
-                  window.location.reload()
                 }}
                 disabled={saving}
                 className="profile-secondary"
@@ -232,11 +423,13 @@ if (!user) {
 
               <button
                 type="button"
-                onClick={saveProfile}
+                onClick={() => void saveProfile()}
                 disabled={saving}
                 className="profile-primary"
               >
-                {saving ? 'Guardando...' : 'Guardar cambios'}
+                {saving
+                  ? 'Guardando...'
+                  : 'Guardar cambios'}
               </button>
             </>
           ) : (
