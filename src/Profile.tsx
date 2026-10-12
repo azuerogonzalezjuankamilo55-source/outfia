@@ -1,5 +1,5 @@
-
 import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import './Profile.css'
 
@@ -8,7 +8,12 @@ type ProfileData = {
   phone: string
 }
 
-export default function Profile() {
+type ProfileProps = {
+  session: Session
+}
+
+export default function Profile({ session }: ProfileProps) {
+
   const [email, setEmail] = useState('')
   const [profile, setProfile] = useState<ProfileData>({
     full_name: '',
@@ -27,13 +32,15 @@ export default function Profile() {
 
       try {
         const { data: userData, error: userError } =
-          await supabase.auth.getUser()
+  await supabase.auth.getUser()
 
-        if (userError || !userData.user) {
-          throw new Error('Debes iniciar sesión para ver tu perfil.')
-        }
+if (userError) throw userError
 
-        const user = userData.user
+const user = userData.user ?? session.user
+
+if (!user) {
+  throw new Error('Debes iniciar sesión para ver tu perfil.')
+}
         setEmail(user.email ?? '')
 
         const { data, error } = await supabase
@@ -67,7 +74,7 @@ export default function Profile() {
     }
 
     void loadProfile()
-  }, [])
+    }, [session])
 
   function handleChange(
     field: keyof ProfileData,
