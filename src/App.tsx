@@ -165,7 +165,11 @@ function App() {
   const [authReady, setAuthReady] = useState(false)
 
   const [active, setActive] = useState('Inicio')
-
+  const [selectedWardrobeIds, setSelectedWardrobeIds] = useState<string[]>([])
+  const [outfitName, setOutfitName] = useState('')
+  const [outfitStyle, setOutfitStyle] = useState('Urbano')
+  const [savingOutfit, setSavingOutfit] = useState(false)
+  const [outfitMessage, setOutfitMessage] = useState('')
   const [saved, setSaved] = useState<number[]>([])
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -604,6 +608,98 @@ function App() {
 
     return <Auth onAuthenticated={handleAuthenticated} />
 
+  }
+
+  const generateOutfit = () => {
+    if (wardrobeItems.length === 0) {
+      setOutfitMessage('Agrega prendas a tu armario para poder generar un outfit.')
+      return
+    }
+
+    const groups: Record<string, WardrobeItem[]> = {
+      top: [], bottom: [], shoes: [], outerwear: [], accessory: [], other: [],
+    }
+    wardrobeItems.forEach((item) => {
+      const category = `${item.category} ${item.name}`.toLocaleLowerCase()
+      if (/camiseta|camisa|blusa|top|polo|crop|su[eé]ter|buzo/.test(category)) groups.top.push(item)
+      else if (/pantal[oó]n|jean|falda|short|bermuda/.test(category)) groups.bottom.push(item)
+      else if (/zapato|zapatilla|tenis|bota|calzado/.test(category)) groups.shoes.push(item)
+      else if (/chaqueta|abrigo|saco|chaleco/.test(category)) groups.outerwear.push(item)
+      else if (/accesorio|gorra|bufanda|cuellero|bolso|gafas|cintur[oó]n/.test(category)) groups.accessory.push(item)
+      else groups.other.push(item)
+    })
+
+    const pick = (items: WardrobeItem[]) => items.length ? items[Math.floor(Math.random() * items.length)] : undefined
+    const chosen = [pick(groups.top), pick(groups.bottom), pick(groups.shoes), pick(groups.outerwear), pick(groups.accessory)]
+      .filter((item): item is WardrobeItem => Boolean(item))
+    if (chosen.length < 2) {
+      const extras = wardrobeItems.filter((item) => !chosen.some((picked) => picked.id === item.id))
+      while (chosen.length < 2 && extras.length) chosen.push(extras.splice(Math.floor(Math.random() * extras.length), 1)[0])
+    }
+    if (chosen.length < 2) {
+      setOutfitMessage('Agrega al menos dos prendas diferentes para generar una combinación.')
+      return
+    }
+    setSelectedWardrobeIds(chosen.map((item) => item.id))
+    setOutfitName((current) => current.trim() ? current : `Look ${outfitStyle.toLowerCase()} ${Math.floor(Math.random() * 900 + 100)}`)
+    setOutfitMessage('¡Combinación creada! Puedes cambiar prendas y guardar tu outfit.')
+  }
+
+  const saveOutfit = async () => {
+    if (!session) {
+      setOutfitMessage('Inicia sesión para guardar tu outfit.')
+      return
+    }
+
+    if (!outfitName.trim()) {
+      setOutfitMessage('Escribe un nombre para tu outfit.')
+      return
+    }
+
+    if (selectedWardrobeIds.length === 0) {
+      setOutfitMessage('Selecciona al menos una prenda.')
+      return
+    }
+
+    setSavingOutfit(true)
+    setOutfitMessage('')
+
+    try {
+      const { data: createdOutfit, error: outfitError } = await supabase
+        .from('outfits')
+        .insert({
+          user_id: session.user.id,
+          name: outfitName.trim(),
+          style: outfitStyle,
+        })
+        .select('id')
+        .single()
+
+      if (outfitError) throw outfitError
+
+      const { error: itemsError } = await supabase
+        .from('outfit_items')
+        .insert(
+          selectedWardrobeIds.map((wardrobeItemId) => ({
+            outfit_id: createdOutfit.id,
+            wardrobe_item_id: wardrobeItemId,
+          })),
+        )
+
+      if (itemsError) {
+        await supabase.from('outfits').delete().eq('id', createdOutfit.id)
+        throw itemsError
+      }
+
+      setOutfitMessage('¡Outfit guardado correctamente!')
+      setOutfitName('')
+      setSelectedWardrobeIds([])
+    } catch (error) {
+      console.error('Error guardando outfit:', error)
+      setOutfitMessage('No se pudo guardar. Revisa la conexión e inténtalo de nuevo.')
+    } finally {
+      setSavingOutfit(false)
+    }
   }
 
   const displayName =
@@ -1685,50 +1781,107 @@ function App() {
 
               </section>
 
-              <section className="create-banner" id="crear">
-
+              <section className="create-banner outfit-creator-section" id="crear">
                 <div className="create-icon"><Sparkles size={23} /></div>
-
                 <div className="create-copy">
-
                   <p className="eyebrow">TU CREATIVIDAD, TU REGLA</p>
-
-                  <h2>El próximo look lo creas tú.</h2>
-
-                  <p>
-
-                    Estamos preparando un espacio para combinar prendas y
-
-                    construir outfits a tu manera.
-
-                  </p>
-
+                  <h2>Crea tu propio outfit</h2>
+                  <p>Combina prendas de tu armario, visualiza tu look y guárdalo en tu colección.</p>
                 </div>
 
-                <button
+                <div className="outfit-creator">
+                  <label htmlFor="outfit-name">Nombre del outfit</label>
+                  <input
+                    id="outfit-name"
+                    type="text"
+                    value={outfitName}
+                    onChange={(event) => setOutfitName(event.target.value)}
+                    placeholder="Ej. Mi look urbano"
+                    maxLength={60}
+                  />
 
-                  type="button"
+                  <label htmlFor="outfit-style">Estilo</label>
+                  <select
+                    id="outfit-style"
+                    value={outfitStyle}
+                    onChange={(event) => setOutfitStyle(event.target.value)}
+                  >
+                    <option value="Urbano">Urbano</option>
+                    <option value="Casual">Casual</option>
+                    <option value="Elegante">Elegante</option>
+                    <option value="Deportivo">Deportivo</option>
+                    <option value="Alternativo">Alternativo</option>
+                  </select>
 
-                  className="create-button"
+                  <div className="outfit-builder-heading">
+                    <div>
+                      <h3>Arma tu combinación</h3>
+                      <p>Elige tus prendas o deja que OUTFIA proponga un look con lo que tienes.</p>
+                    </div>
+                    <button type="button" className="generate-outfit-button" onClick={generateOutfit} disabled={wardrobeLoading || wardrobeItems.length < 2}>
+                      <Sparkles size={16} /> Generar outfit
+                    </button>
+                  </div>
+                  {wardrobeLoading ? (
+                    <p>Cargando tu armario...</p>
+                  ) : wardrobeItems.length === 0 ? (
+                    <p>Aún no tienes prendas en tu armario. Ve a “Mi armario” y agrega algunas primero.</p>
+                  ) : (
+                    <div className="outfit-selection-grid">
+                      {wardrobeItems.map((item) => {
+                        const isSelected = selectedWardrobeIds.includes(item.id)
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className={`outfit-selection-card ${isSelected ? 'selected' : ''}`}
+                            aria-pressed={isSelected}
+                            onClick={() => setSelectedWardrobeIds((current) =>
+                              isSelected
+                                ? current.filter((id) => id !== item.id)
+                                : [...current, item.id]
+                            )}
+                          >
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} />
+                            ) : (
+                              <div className="outfit-no-image"><Shirt size={28} /></div>
+                            )}
+                            <span>{item.name}</span>
+                            <small>{item.category}</small>
+                            <span>{isSelected ? '✓ Seleccionada' : 'Seleccionar'}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
 
-                  onClick={() =>
+                  <p className="outfit-selection-count">{selectedWardrobeIds.length === 0 ? 'Todavía no has elegido prendas.' : `${selectedWardrobeIds.length} prendas en tu combinación`}</p>
+                  {selectedWardrobeIds.length > 0 && (
+                    <div className="outfit-preview">
+                      <h3>Tu outfit generado</h3>
+                      <div className="outfit-preview-grid">
+                        {wardrobeItems.filter((item) => selectedWardrobeIds.includes(item.id)).map((item) => (
+                          <div key={item.id} className="outfit-preview-item">
+                            {item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <Shirt size={28} />}
+                            <span>{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                    window.alert(
-
-                      'El creador de outfits será una de las próximas funciones de OUTFIA.',
-
-                    )
-
-                  }
-
-                >
-
-                  <Plus size={18} />
-
-                  Próximamente
-
-                </button>
-
+                  {outfitMessage && <p className="outfit-message" role="status">{outfitMessage}</p>}
+                  <button
+                    type="button"
+                    className="create-button"
+                    onClick={() => void saveOutfit()}
+                    disabled={savingOutfit}
+                  >
+                    <Plus size={18} />
+                    {savingOutfit ? 'Guardando...' : 'Guardar outfit'}
+                  </button>
+                </div>
               </section>
 
             </>

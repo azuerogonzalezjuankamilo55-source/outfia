@@ -293,3 +293,52 @@
     font-size: 29px;
   }
 }
+
+/* ARMARIO OUTFIA: tarjetas compactas */
+.wardrobe-card {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  position: relative;
+}
+
+/* Área de la fotografía */
+.wardrobe-card .wardrobe-image-wrap {
+  height: 250px;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  background: #151515;
+  border-radius: 12px;
+}
+
+/* Mostrar la foto completa sin ampliarla */
+.wardrobe-card .outfit-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Botón para eliminar */
+.wardrobe-card .save-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+/* Información de la prenda */
+.wardrobe-card .outfit-info {
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* Adaptación a celulares */
+@media (max-width: 600px) {
+  .wardrobe-card .wardrobe-image-wrap {
+    height: 190px;
+  }
+}

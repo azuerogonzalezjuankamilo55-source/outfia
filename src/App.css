@@ -985,8 +985,8 @@ img {
 /* Tarjetas del armario: contain muestra la foto completa sin recortarla */
 .wardrobe-grid {
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));
-  gap:20px;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,205px),1fr));
+  gap:16px;
   align-items:start
 }
 
@@ -1012,7 +1012,7 @@ img {
   align-items:center;
   justify-content:center;
   width:100%;
-  height:clamp(220px,28vw,300px);
+  height:clamp(145px,18vw,215px);
   overflow:hidden;
   aspect-ratio:auto;
   background:#151515;
@@ -1061,7 +1061,7 @@ img {
 .wardrobe-card .outfit-info {
   display:block;
   min-width:0;
-  padding:16px;
+  padding:13px 14px;
   overflow-wrap:anywhere;
   background:#101014
 }
@@ -1431,7 +1431,7 @@ img {
   }
 
 .wardrobe-card .wardrobe-image-wrap {
-    height:220px
+    height:180px
   }
 
 .wardrobe-card .outfit-info {
@@ -1507,7 +1507,7 @@ img {
   }
 
 .wardrobe-card .wardrobe-image-wrap {
-    height:280px
+    height:200px
   }
 
 }
@@ -1520,3 +1520,32 @@ img {
   }
 
 }
+
+
+/* Creador de outfits: tarjetas compactas y vista previa ordenada */
+.outfit-creator-section { display:block; }
+.outfit-creator { width:100%; max-width:100%; margin-top:22px; }
+.outfit-creator > label { display:block; margin:16px 0 7px; color:#c7bdd5; font-size:12px; }
+.outfit-creator > input, .outfit-creator > select { width:100%; max-width:100%; min-height:44px; padding:11px 13px; border:1px solid #393141; border-radius:8px; background:#111015; color:#f5f2fa; }
+.outfit-builder-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:25px 0 14px; }
+.outfit-builder-heading h3, .outfit-preview h3 { margin:0 0 6px; color:#f5f2fa; font:500 21px/1.25 'Playfair Display',Georgia,serif; }
+.outfit-builder-heading p { margin:0; color:#a5a0b0; font-size:12px; line-height:1.6; }
+.generate-outfit-button { display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:10px 15px; border:1px solid #7854a4; border-radius:7px; background:#241832; color:#eee4ff; font-size:12px; font-weight:600; cursor:pointer; }
+.generate-outfit-button:hover { background:#39234f; }
+.generate-outfit-button:disabled { opacity:.45; cursor:not-allowed; }
+.outfit-selection-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(125px,1fr)); gap:12px; margin-top:12px; }
+.outfit-selection-card { display:flex; min-width:0; flex-direction:column; gap:6px; padding:8px; overflow:hidden; border:1px solid #302b38; border-radius:9px; background:#111015; color:#f5f2fa; text-align:left; cursor:pointer; }
+.outfit-selection-card.selected { border-color:#a47ae0; box-shadow:0 0 0 1px #a47ae0 inset; background:#1c1525; }
+.outfit-selection-card img { display:block; width:100%; height:115px; object-fit:contain; border-radius:5px; background:#18161c; }
+.outfit-selection-card > span { overflow:hidden; max-width:100%; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.outfit-selection-card small { color:#a5a0b0; font-size:10px; }
+.outfit-selection-card > span:last-child { color:#c7a9f7; font-size:10px; }
+.outfit-no-image { display:grid; place-items:center; width:100%; height:115px; color:#a5a0b0; background:#18161c; }
+.outfit-selection-count { margin:15px 0; color:#bdb5c8; font-size:12px; }
+.outfit-preview { margin:20px 0; padding:16px; border:1px solid #393141; border-radius:10px; background:#0e0d11; }
+.outfit-preview-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:12px; margin-top:12px; }
+.outfit-preview-item { display:flex; min-width:0; flex-direction:column; gap:7px; color:#d9d2e2; font-size:11px; }
+.outfit-preview-item img { display:block; width:100%; height:135px; object-fit:contain; border-radius:6px; background:#18161c; }
+.outfit-preview-item span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.outfit-message { margin:12px 0; color:#cbb4f0; font-size:12px; line-height:1.5; }
+@media(max-width:600px) { .outfit-builder-heading { align-items:flex-start; flex-direction:column; } .generate-outfit-button { width:100%; } .outfit-selection-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
